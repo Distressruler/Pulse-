@@ -1,0 +1,544 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
+import {
+  CalendarDays,
+  FileText,
+  Pencil,
+  UserPlus,
+  UserRound,
+} from "lucide-react";
+
+import AppNav from "@/components/navigation/AppNav";
+import { supabase } from "@/lib/supabase";
+
+import {
+  followUser,
+  getFollowers,
+  getFollowing,
+  isFollowingUser,
+  unfollowUser,
+} from "@/lib/services/follows";
+
+import type {
+  Post,
+  Profile,
+} from "@/types/social";
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const params = useParams();
+
+  const profileId =
+    typeof params.id === "string"
+      ? params.id
+      : "";
+
+  const [currentUserId, setCurrentUserId] =
+    useState("");
+
+  const [profile, setProfile] =
+    useState<Profile | null>(null);
+
+  const [posts, setPosts] =
+    useState<Post[]>([]);
+
+  const [followersCount, setFollowersCount] =
+    useState(0);
+
+  const [followingCount, setFollowingCount] =
+    useState(0);
+
+  const [
+    followingProfile,
+    setFollowingProfile,
+  ] = useState(false);
+
+  const [pageLoading, setPageLoading] =
+    useState(true);
+
+  const [followLoading, setFollowLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const loadProfilePage = useCallback(
+    async (loggedInUserId: string) => {
+      if (!profileId) {
+        setMessage("Profile ID is missing.");
+        return;
+      }
+
+      try {
+        setMessage("");
+
+        const {
+          data: loadedProfile,
+          error: profileError,
+        } = await supabase
+          .from("profiles")
+          .select(
+            "id, username, display_name, bio, avatar_url, created_at"
+          )
+          .eq("id", profileId)
+          .single();
+
+        if (profileError) {
+          throw new Error(
+            profileError.message
+          );
+        }
+
+        setProfile(loadedProfile);
+
+        const {
+          data: loadedPosts,
+          error: postsError,
+        } = await supabase
+          .from("posts")
+          .select(
+            "id, author_id, content, created_at"
+          )
+          .eq("author_id", profileId)
+          .order("created_at", {
+            ascending: false,
+          });
+
+        if (postsError) {
+          throw new Error(
+            postsError.message
+          );
+        }
+
+        setPosts(loadedPosts ?? []);
+
+        const [followers, following] =
+          await Promise.all([
+            getFollowers(profileId),
+            getFollowing(profileId),
+          ]);
+
+        setFollowersCount(
+          followers.length
+        );
+
+        setFollowingCount(
+          following.length
+        );
+
+        if (loggedInUserId !== profileId) {
+          const followStatus =
+            await isFollowingUser(
+              loggedInUserId,
+              profileId
+            );
+
+          setFollowingProfile(
+            followStatus
+          );
+        } else {
+          setFollowingProfile(false);
+        }
+      } catch (error) {
+        setProfile(null);
+
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load this profile."
+        );
+      }
+    },
+    [profileId]
+  );
+
+  useEffect(() => {
+    async function loadPage() {
+      /*
+       * Protection against the old URL:
+       * /edit-profile
+       *
+       * Next.js would otherwise treat "edit"
+       * as the dynamic profile ID.
+       */
+      if (profileId === "edit") {
+        router.replace("/edit-profile");
+        return;
+      }
+
+      try {
+        setPageLoading(true);
+
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error || !user) {
+          router.replace("/login");
+          return;
+        }
+
+        setCurrentUserId(user.id);
+
+        await loadProfilePage(user.id);
+      } finally {
+        setPageLoading(false);
+      }
+    }
+
+    loadPage();
+  }, [
+    loadProfilePage,
+    profileId,
+    router,
+  ]);
+
+  async function handleToggleFollow() {
+    if (!currentUserId || !profileId) {
+      return;
+    }
+
+    try {
+      setFollowLoading(true);
+      setMessage("");
+
+      if (followingProfile) {
+        await unfollowUser(
+          currentUserId,
+          profileId
+        );
+
+        setFollowingProfile(false);
+
+        setFollowersCount((count) =>
+          Math.max(0, count - 1)
+        );
+      } else {
+        await followUser(
+          currentUserId,
+          profileId
+        );
+
+        setFollowingProfile(true);
+
+        setFollowersCount(
+          (count) => count + 1
+        );
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not update follow status."
+      );
+    } finally {
+      setFollowLoading(false);
+    }
+  }
+
+  if (
+    pageLoading ||
+    profileId === "edit"
+  ) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4">
+        <div className="rounded-2xl border border-pink-100 bg-white px-6 py-4 shadow-sm">
+          <p className="text-sm font-medium text-pink-500">
+            Loading profile...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 text-gray-900">
+        <div className="w-full max-w-md rounded-3xl border border-pink-100 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-pink-100 text-pink-500">
+            <UserRound size={28} />
+          </div>
+
+          <h1 className="mt-5 text-2xl font-bold">
+            Profile not found
+          </h1>
+
+          {message && (
+            <p className="mt-3 rounded-2xl bg-red-50 p-4 text-sm text-red-600">
+              {message}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() =>
+              router.push("/feed")
+            }
+            className="mt-6 rounded-full bg-pink-500 px-6 py-3 font-semibold text-white transition hover:bg-pink-600"
+          >
+            Return to Feed
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const ownProfile =
+    currentUserId === profile.id;
+
+  const displayedName =
+    profile.display_name ||
+    profile.username ||
+    "Pulse user";
+
+  const firstLetter = displayedName
+    .charAt(0)
+    .toUpperCase();
+
+  const joinedDate = profile.created_at
+    ? new Date(
+        profile.created_at
+      ).toLocaleDateString(undefined, {
+        month: "long",
+        year: "numeric",
+      })
+    : "Recently";
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        <AppNav
+          currentUserId={currentUserId}
+        />
+
+        {message && (
+          <p className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600 shadow-sm">
+            {message}
+          </p>
+        )}
+
+        <section className="overflow-hidden rounded-3xl border border-pink-100 bg-white shadow-sm">
+          <div className="h-28 bg-gradient-to-r from-pink-200 via-rose-100 to-pink-100" />
+
+          <div className="px-5 pb-6 sm:px-7">
+            <div className="-mt-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex items-end gap-4">
+                <div className="rounded-full border-4 border-white bg-white shadow-sm">
+                  {profile.avatar_url ? (
+                    <img
+                      src={
+                        profile.avatar_url
+                      }
+                      alt={displayedName}
+                      className="h-24 w-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-pink-100 text-3xl font-bold text-pink-500">
+                      {firstLetter}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pb-1">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {displayedName}
+                  </h1>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    @
+                    {profile.username ??
+                      "pulse-user"}
+                  </p>
+                </div>
+              </div>
+
+              {ownProfile ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      "/edit-profile"
+                    )
+                  }
+                  className="flex items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-semibold text-pink-500 transition hover:bg-pink-50"
+                >
+                  <Pencil size={16} />
+
+                  Edit Profile
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={followLoading}
+                  onClick={
+                    handleToggleFollow
+                  }
+                  className={
+                    followingProfile
+                      ? "flex items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-semibold text-pink-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      : "flex items-center justify-center gap-2 rounded-full bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  }
+                >
+                  <UserPlus size={16} />
+
+                  {followLoading
+                    ? "Updating..."
+                    : followingProfile
+                      ? "Unfollow"
+                      : "Follow"}
+                </button>
+              )}
+            </div>
+
+            {profile.bio ? (
+              <p className="mt-6 whitespace-pre-wrap break-words leading-7 text-gray-700">
+                {profile.bio}
+              </p>
+            ) : (
+              <p className="mt-6 text-sm text-gray-400">
+                {ownProfile
+                  ? "Add a bio to tell people about yourself."
+                  : "No bio added yet."}
+              </p>
+            )}
+
+            <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+              <CalendarDays
+                size={16}
+                className="text-pink-400"
+              />
+
+              Joined {joinedDate}
+            </div>
+
+            <div className="mt-6 grid grid-cols-3 gap-3 border-t border-pink-100 pt-5">
+              <div className="rounded-2xl bg-pink-50 p-4 text-center">
+                <p className="text-xl font-bold text-gray-900">
+                  {posts.length}
+                </p>
+
+                <p className="mt-1 text-xs font-medium text-gray-500">
+                  Posts
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-pink-50 p-4 text-center">
+                <p className="text-xl font-bold text-gray-900">
+                  {followersCount}
+                </p>
+
+                <p className="mt-1 text-xs font-medium text-gray-500">
+                  Followers
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-pink-50 p-4 text-center">
+                <p className="text-xl font-bold text-gray-900">
+                  {followingCount}
+                </p>
+
+                <p className="mt-1 text-xs font-medium text-gray-500">
+                  Following
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 text-pink-500">
+              <FileText size={19} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Posts
+              </h2>
+
+              <p className="text-sm text-gray-500">
+                Recent posts from this
+                profile.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            {posts.length === 0 ? (
+              <div className="rounded-3xl border border-pink-100 bg-white p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pink-50 text-pink-400">
+                  <FileText size={24} />
+                </div>
+
+                <h3 className="mt-4 font-bold text-gray-900">
+                  No posts yet
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  {ownProfile
+                    ? "Your posts will appear here after you publish them."
+                    : "This user has not posted anything yet."}
+                </p>
+              </div>
+            ) : (
+              posts.map((post) => (
+                <article
+                  key={post.id}
+                  className="rounded-3xl border border-pink-100 bg-white p-5 shadow-sm transition hover:shadow-md sm:p-6"
+                >
+                  <div className="flex items-center gap-3">
+                    {profile.avatar_url ? (
+                      <img
+                        src={
+                          profile.avatar_url
+                        }
+                        alt={displayedName}
+                        className="h-10 w-10 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pink-100 font-bold text-pink-500">
+                        {firstLetter}
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900">
+                        {displayedName}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        @
+                        {profile.username ??
+                          "pulse-user"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 whitespace-pre-wrap break-words leading-7 text-gray-700">
+                    {post.content}
+                  </p>
+
+                  <p className="mt-4 text-xs text-gray-400">
+                    {new Date(
+                      post.created_at
+                    ).toLocaleString()}
+                  </p>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
