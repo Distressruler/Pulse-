@@ -12,6 +12,8 @@ import {
 import {
   CalendarDays,
   FileText,
+  LoaderCircle,
+  MessageCircle,
   Pencil,
   UserPlus,
   UserRound,
@@ -27,6 +29,10 @@ import {
   isFollowingUser,
   unfollowUser,
 } from "@/lib/services/follows";
+
+import {
+  createDirectConversation,
+} from "@/lib/services/messages";
 
 import type {
   Post,
@@ -80,7 +86,10 @@ function ProfileHeaderSkeleton() {
             </div>
           </div>
 
-          <SkeletonBlock className="h-10 w-full rounded-full sm:w-32" />
+          <div className="flex gap-3">
+            <SkeletonBlock className="h-10 w-28 rounded-full" />
+            <SkeletonBlock className="h-10 w-28 rounded-full" />
+          </div>
         </div>
 
         <div className="mt-6 space-y-3">
@@ -204,6 +213,9 @@ export default function ProfilePage() {
     useState(true);
 
   const [followLoading, setFollowLoading] =
+    useState(false);
+
+  const [messageLoading, setMessageLoading] =
     useState(false);
 
   const [message, setMessage] =
@@ -377,6 +389,40 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleOpenMessage() {
+    if (
+      !currentUserId ||
+      !profileId ||
+      currentUserId === profileId ||
+      messageLoading
+    ) {
+      return;
+    }
+
+    try {
+      setMessageLoading(true);
+      setMessage("");
+
+      const conversationId =
+        await createDirectConversation(
+          currentUserId,
+          profileId
+        );
+
+      router.push(
+        `/messages/${conversationId}`
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not open the conversation."
+      );
+
+      setMessageLoading(false);
+    }
+  }
+
   if (
     pageLoading ||
     profileId === "edit"
@@ -496,30 +542,55 @@ export default function ProfilePage() {
                   className="flex items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-semibold text-pink-500 transition hover:bg-pink-50"
                 >
                   <Pencil size={16} />
-
                   Edit Profile
                 </button>
               ) : (
-                <button
-                  type="button"
-                  disabled={followLoading}
-                  onClick={
-                    handleToggleFollow
-                  }
-                  className={
-                    followingProfile
-                      ? "flex items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-semibold text-pink-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      : "flex items-center justify-center gap-2 rounded-full bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  }
-                >
-                  <UserPlus size={16} />
+                <div className="flex w-full gap-3 sm:w-auto">
+                  <button
+                    type="button"
+                    disabled={followLoading}
+                    onClick={
+                      handleToggleFollow
+                    }
+                    className={
+                      followingProfile
+                        ? "flex flex-1 items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-semibold text-pink-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                        : "flex flex-1 items-center justify-center gap-2 rounded-full bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                    }
+                  >
+                    <UserPlus size={16} />
 
-                  {followLoading
-                    ? "Updating..."
-                    : followingProfile
-                      ? "Unfollow"
-                      : "Follow"}
-                </button>
+                    {followLoading
+                      ? "Updating..."
+                      : followingProfile
+                        ? "Unfollow"
+                        : "Follow"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      handleOpenMessage
+                    }
+                    disabled={messageLoading}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full border border-pink-200 bg-white px-5 py-2.5 text-sm font-semibold text-pink-500 transition hover:bg-pink-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                  >
+                    {messageLoading ? (
+                      <LoaderCircle
+                        size={16}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <MessageCircle
+                        size={16}
+                      />
+                    )}
+
+                    {messageLoading
+                      ? "Opening..."
+                      : "Message"}
+                  </button>
+                </div>
               )}
             </div>
 
