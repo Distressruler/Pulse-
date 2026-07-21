@@ -38,6 +38,8 @@ import type {
   Profile,
 } from "@/types/social";
 
+import FollowListModal from "@/components/profile/FollowListModal";
+
 function SkeletonBlock({
   className = "",
 }: {
@@ -219,6 +221,11 @@ export default function ProfilePage() {
 
   const [message, setMessage] =
     useState("");
+
+const [followListType, setFollowListType] =
+  useState<"followers" | "following" | null>(
+    null
+  );
 
   const loadProfilePage = useCallback(
     async (loggedInUserId: string) => {
@@ -621,26 +628,33 @@ export default function ProfilePage() {
                   Posts
                 </p>
               </div>
+        <button
+           type="button"
+            onClick={() => setFollowListType("followers")}
+              className="rounded-2xl bg-pink-50 p-4 text-center transition hover:bg-pink-100"
+>
+         <p className="text-xl font-bold text-gray-900">
+           {followersCount}
+          </p>
 
-              <div className="rounded-2xl bg-pink-50 p-4 text-center">
-                <p className="text-xl font-bold text-gray-900">
-                  {followersCount}
-                </p>
+       <p className="mt-1 text-xs font-medium text-gray-500">
+              Followers
+       </p>
+        </button>
 
-                <p className="mt-1 text-xs font-medium text-gray-500">
-                  Followers
-                </p>
-              </div>
+             <button
+                type="button"
+            onClick={() => setFollowListType("following")}
+          className="rounded-2xl bg-pink-50 p-4 text-center transition hover:bg-pink-100"
+>
+         <p className="text-xl font-bold text-gray-900">
+                   {followingCount}
+             </p>
 
-              <div className="rounded-2xl bg-pink-50 p-4 text-center">
-                <p className="text-xl font-bold text-gray-900">
-                  {followingCount}
-                </p>
-
-                <p className="mt-1 text-xs font-medium text-gray-500">
-                  Following
-                </p>
-              </div>
+                 <p className="mt-1 text-xs font-medium text-gray-500">
+                        Following
+               </p>
+                 </button>
             </div>
           </div>
         </section>
@@ -729,6 +743,16 @@ export default function ProfilePage() {
           </div>
         </section>
       </div>
+
+      {followListType && (
+        <FollowListModal
+          profileId={profile.id}
+          type={followListType}
+          onClose={() =>
+            setFollowListType(null)
+          }
+        />
+      )}
     </main>
   );
 }
