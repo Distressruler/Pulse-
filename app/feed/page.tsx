@@ -43,6 +43,9 @@ import type {
   Profile,
 } from "@/types/social";
 
+import PullToRefresh from "@/components/feed/PullToRefresh";
+
+
 function SkeletonBlock({
   className = "",
 }: {
@@ -424,6 +427,7 @@ export default function FeedPage() {
   }
 
   return (
+ <PullToRefresh onRefresh={loadFeed}>
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
   
@@ -484,5 +488,6 @@ export default function FeedPage() {
         </section>
       </div>
     </main>
+      </PullToRefresh>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import AppNav from "@/components/navigation/AppNav";
 import { supabase } from "@/lib/supabase";
+import PageTransition from "@/components/layout/PageTransition";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -48,15 +49,15 @@ export default function AppShell({
 
   return (
     <>
-      <main
-        className={
-          currentUserId && !hideNavigation
-            ? "flex-1 pb-28"
-            : "flex-1"
-        }
-      >
-        {children}
-      </main>
+     <main
+  className={
+    currentUserId && !hideNavigation
+      ? "flex-1 pb-28"
+      : "flex-1"
+  }
+>
+  <PageTransition>{children}</PageTransition>
+</main>
 
       {currentUserId && !hideNavigation && (
         <AppNav currentUserId={currentUserId} />

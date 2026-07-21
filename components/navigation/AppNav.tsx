@@ -22,73 +22,90 @@ export default function AppNav({
 
   const links = [
     {
-      label: "Feed",
       path: "/feed",
       icon: House,
+      label: "Feed",
     },
     {
-      label: "Search",
       path: "/search",
       icon: Search,
+      label: "Search",
     },
     {
-      label: "Notifications",
       path: "/notifications",
       icon: Bell,
+      label: "Notifications",
     },
     {
-      label: "Messages",
       path: "/messages",
       icon: MessageCircle,
+      label: "Messages",
     },
     {
-      label: "Profile",
       path: `/profile/${currentUserId}`,
       icon: User,
+      label: "Profile",
     },
   ];
 
   return (
-    <nav className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 overflow-x-auto rounded-3xl border border-pink-100 bg-white/90 p-3 shadow-lg backdrop-blur">
-      <div className="flex min-w-max items-center justify-center gap-2">
+    <nav className="fixed bottom-5 left-1/2 z-50 w-[92%] max-w-md -translate-x-1/2 rounded-3xl border border-pink-100 bg-white/95 p-2 shadow-2xl">
+      <div className="flex items-center justify-between">
         {links.map((link) => {
           const Icon = link.icon;
-          const active = pathname === link.path;
+
+          const active =
+            pathname === link.path ||
+            (link.path === "/messages" &&
+              pathname.startsWith("/messages/"));
 
           return (
             <motion.button
-              key={link.label}
+              key={link.path}
               type="button"
-              onClick={() => router.push(link.path)}
               aria-label={link.label}
-              whileTap={{ scale: 0.96 }}
-              className={`relative flex items-center gap-2 rounded-full px-4 py-2.5 text-sm transition ${
-                active
-                  ? "font-bold text-white"
-                  : "font-semibold text-gray-600 hover:bg-pink-50 hover:text-pink-500"
-              }`}
+              onClick={() => router.push(link.path)}
+              whileTap={{
+                scale: 0.9,
+              }}
+              className="relative flex h-12 w-12 items-center justify-center rounded-2xl"
             >
               {active && (
                 <motion.div
                   layoutId="active-tab"
-                  className="absolute inset-0 rounded-full bg-pink-400"
+                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500"
                   transition={{
                     type: "spring",
-                    stiffness: 500,
-                    damping: 35,
+                    stiffness: 520,
+                    damping: 38,
+                    mass: 0.7,
                   }}
                 />
               )}
 
-              <Icon
-                size={19}
-                strokeWidth={2.2}
+              <motion.div
                 className="relative z-10"
-              />
-
-              <span className="relative z-10 hidden sm:inline">
-                {link.label}
-              </span>
+                animate={{
+                  scale: active ? 1.15 : 1,
+                  y: active ? -1 : 0,
+                  rotate: active ? 2 : 0,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 450,
+                  damping: 24,
+                }}
+              >
+                <Icon
+                  size={22}
+                  strokeWidth={2.2}
+                  className={
+                    active
+                      ? "text-white"
+                      : "text-gray-500"
+                  }
+                />
+              </motion.div>
             </motion.button>
           );
         })}
