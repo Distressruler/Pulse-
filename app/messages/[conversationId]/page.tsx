@@ -9,7 +9,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
@@ -17,17 +20,22 @@ import {
   CheckCheck,
   LoaderCircle,
   MessageCircle,
+  Reply,
   Send,
+  X,
 } from "lucide-react";
 
 import AppNav from "@/components/navigation/AppNav";
-import {
+import type {
   ConversationMessage,
+  MessageProfile,
+} from "@/lib/types/messages";
+import {
   getConversationMessages,
   markConversationAsRead,
-  MessageProfile,
   sendConversationMessage,
-} from "@/lib/services/messages";
+  unsendConversationMessage,
+} from "@/lib/services/messages/messages";
 import { supabase } from "@/lib/supabase";
 
 function ChatSkeleton() {
@@ -62,7 +70,9 @@ function ChatSkeleton() {
   );
 }
 
-function getDisplayName(profile: MessageProfile | null) {
+function getDisplayName(
+  profile: MessageProfile | null
+) {
   return (
     profile?.display_name?.trim() ||
     profile?.username?.trim() ||
@@ -75,24 +85,35 @@ function getInitials(name: string) {
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
+    .map((part) =>
+      part[0]?.toUpperCase()
+    )
     .join("");
 }
 
-function formatMessageTime(dateValue: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(dateValue));
+function formatMessageTime(
+  dateValue: string
+) {
+  return new Intl.DateTimeFormat(
+    undefined,
+    {
+      hour: "numeric",
+      minute: "2-digit",
+    }
+  ).format(new Date(dateValue));
 }
 
-function formatMessageDate(dateValue: string) {
+function formatMessageDate(
+  dateValue: string
+) {
   const date = new Date(dateValue);
   const now = new Date();
 
   const isToday =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
+    date.getFullYear() ===
+      now.getFullYear() &&
+    date.getMonth() ===
+      now.getMonth() &&
     date.getDate() === now.getDate();
 
   if (isToday) {
@@ -100,25 +121,34 @@ function formatMessageDate(dateValue: string) {
   }
 
   const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
+  yesterday.setDate(
+    now.getDate() - 1
+  );
 
   const isYesterday =
-    date.getFullYear() === yesterday.getFullYear() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getDate() === yesterday.getDate();
+    date.getFullYear() ===
+      yesterday.getFullYear() &&
+    date.getMonth() ===
+      yesterday.getMonth() &&
+    date.getDate() ===
+      yesterday.getDate();
 
   if (isYesterday) {
     return "Yesterday";
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    month: "long",
-    day: "numeric",
-    year:
-      date.getFullYear() === now.getFullYear()
-        ? undefined
-        : "numeric",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    undefined,
+    {
+      month: "long",
+      day: "numeric",
+      year:
+        date.getFullYear() ===
+        now.getFullYear()
+          ? undefined
+          : "numeric",
+    }
+  ).format(date);
 }
 
 function shouldShowDateDivider(
@@ -132,6 +162,7 @@ function shouldShowDateDivider(
   const currentDate = new Date(
     messages[index].created_at
   );
+
   const previousDate = new Date(
     messages[index - 1].created_at
   );
@@ -146,43 +177,110 @@ function shouldShowDateDivider(
   );
 }
 
+function getReplyAuthorName(
+  message: ConversationMessage,
+  currentUserId: string,
+  otherUser: MessageProfile | null
+) {
+  if (
+    message.sender_id === currentUserId
+  ) {
+    return "You";
+  }
+
+  return getDisplayName(otherUser);
+}
+
+function getReplyPreviewContent(
+  content: string
+) {
+  const cleanedContent =
+    content.trim();
+
+  if (cleanedContent.length <= 100) {
+    return cleanedContent;
+  }
+
+  return `${cleanedContent.slice(
+    0,
+    100
+  )}…`;
+}
+
 export default function ConversationPage() {
   const router = useRouter();
+
   const params = useParams<{
     conversationId: string;
   }>();
 
   const conversationId =
-    typeof params.conversationId === "string"
+    typeof params.conversationId ===
+    "string"
       ? params.conversationId
       : "";
 
   const messagesEndRef =
-    useRef<HTMLDivElement | null>(null);
+    useRef<HTMLDivElement | null>(
+      null
+    );
+
+  const textareaRef =
+    useRef<HTMLTextAreaElement | null>(
+      null
+    );
 
   const [currentUserId, setCurrentUserId] =
     useState("");
+
+  const [
+    deletingMessageId,
+    setDeletingMessageId,
+  ] = useState<string | null>(null);
   const [otherUser, setOtherUser] =
-    useState<MessageProfile | null>(null);
-  const [messages, setMessages] = useState<
-    ConversationMessage[]
-  >([]);
+    useState<MessageProfile | null>(
+      null
+    );
+
+  const [messages, setMessages] =
+    useState<
+      ConversationMessage[]
+    >([]);
+
   const [messageText, setMessageText] =
     useState("");
+
+  const [
+    replyingToMessage,
+    setReplyingToMessage,
+  ] =
+    useState<ConversationMessage | null>(
+      null
+    );
+
   const [pageLoading, setPageLoading] =
     useState(true);
+
   const [sending, setSending] =
     useState(false);
-  const [errorMessage, setErrorMessage] =
-    useState("");
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
+
   const [sendError, setSendError] =
     useState("");
 
   const scrollToBottom = useCallback(
-    (behavior: ScrollBehavior = "smooth") => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior,
-      });
+    (
+      behavior: ScrollBehavior = "smooth"
+    ) => {
+      messagesEndRef.current?.scrollIntoView(
+        {
+          behavior,
+        }
+      );
     },
     []
   );
@@ -206,10 +304,11 @@ export default function ConversationPage() {
         );
       }
 
-      const otherMember = members?.find(
-        (member) =>
-          member.user_id !== userId
-      );
+      const otherMember =
+        members?.find(
+          (member) =>
+            member.user_id !== userId
+        );
 
       if (!otherMember) {
         throw new Error(
@@ -225,7 +324,10 @@ export default function ConversationPage() {
         .select(
           "id, username, display_name, avatar_url"
         )
-        .eq("id", otherMember.user_id)
+        .eq(
+          "id",
+          otherMember.user_id
+        )
         .single();
 
       if (profileError) {
@@ -260,21 +362,25 @@ export default function ConversationPage() {
           userId
         );
 
-        setMessages((currentMessages) =>
-          currentMessages.map((message) => {
-            if (
-              message.sender_id !== userId &&
-              !message.read_at
-            ) {
-              return {
-                ...message,
-                read_at:
-                  new Date().toISOString(),
-              };
-            }
+        setMessages(
+          (currentMessages) =>
+            currentMessages.map(
+              (message) => {
+                if (
+                  message.sender_id !==
+                    userId &&
+                  !message.read_at
+                ) {
+                  return {
+                    ...message,
+                    read_at:
+                      new Date().toISOString(),
+                  };
+                }
 
-            return message;
-          })
+                return message;
+              }
+            )
         );
 
         requestAnimationFrame(() => {
@@ -305,6 +411,7 @@ export default function ConversationPage() {
         setErrorMessage(
           "This conversation link is invalid."
         );
+
         setPageLoading(false);
         return;
       }
@@ -312,7 +419,8 @@ export default function ConversationPage() {
       const {
         data: { user },
         error,
-      } = await supabase.auth.getUser();
+      } =
+        await supabase.auth.getUser();
 
       if (!isMounted) {
         return;
@@ -325,7 +433,10 @@ export default function ConversationPage() {
       }
 
       setCurrentUserId(user.id);
-      await loadConversation(user.id);
+
+      await loadConversation(
+        user.id
+      );
     }
 
     loadPage();
@@ -408,7 +519,7 @@ export default function ConversationPage() {
                   )
               );
             } catch {
-              // The message still appears even if
+              // The message still appears if
               // updating its read status fails.
             }
           }
@@ -440,18 +551,80 @@ export default function ConversationPage() {
                     : message
               )
           );
+
+          setReplyingToMessage(
+            (currentReply) =>
+              currentReply?.id ===
+              updatedMessage.id
+                ? updatedMessage
+                : currentReply
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const deletedMessage =
+            payload.old as Pick<
+              ConversationMessage,
+              "id"
+            >;
+
+          setMessages(
+            (currentMessages) =>
+              currentMessages.filter(
+                (message) =>
+                  message.id !==
+                  deletedMessage.id
+              )
+          );
+
+          setReplyingToMessage(
+            (currentReply) =>
+              currentReply?.id ===
+              deletedMessage.id
+                ? null
+                : currentReply
+          );
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(
+        channel
+      );
     };
   }, [
     conversationId,
     currentUserId,
     scrollToBottom,
   ]);
+
+  function handleStartReply(
+    message: ConversationMessage
+  ) {
+    setReplyingToMessage(message);
+    setSendError("");
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
+
+  function handleCancelReply() {
+    setReplyingToMessage(null);
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
 
   async function handleSendMessage(
     event: FormEvent<HTMLFormElement>
@@ -477,30 +650,36 @@ export default function ConversationPage() {
         await sendConversationMessage(
           conversationId,
           currentUserId,
-          cleanedMessage
+          cleanedMessage,
+          replyingToMessage?.id ?? null
         );
 
-      setMessages((currentMessages) => {
-        const alreadyExists =
-          currentMessages.some(
-            (message) =>
-              message.id === sentMessage.id
-          );
+      setMessages(
+        (currentMessages) => {
+          const alreadyExists =
+            currentMessages.some(
+              (message) =>
+                message.id ===
+                sentMessage.id
+            );
 
-        if (alreadyExists) {
-          return currentMessages;
+          if (alreadyExists) {
+            return currentMessages;
+          }
+
+          return [
+            ...currentMessages,
+            sentMessage,
+          ];
         }
-
-        return [
-          ...currentMessages,
-          sentMessage,
-        ];
-      });
+      );
 
       setMessageText("");
+      setReplyingToMessage(null);
 
       requestAnimationFrame(() => {
         scrollToBottom();
+        textareaRef.current?.focus();
       });
     } catch (error) {
       setSendError(
@@ -513,10 +692,57 @@ export default function ConversationPage() {
     }
   }
 
+  async function handleUnsendMessage(
+    messageId: string
+  ) {
+    if (deletingMessageId) {
+      return;
+    }
+
+    try {
+      setDeletingMessageId(messageId);
+      setSendError("");
+
+      await unsendConversationMessage(
+        messageId
+      );
+
+      setMessages(
+        (currentMessages) =>
+          currentMessages.filter(
+            (message) =>
+              message.id !== messageId
+          )
+      );
+
+      setReplyingToMessage(
+        (currentReply) =>
+          currentReply?.id === messageId
+            ? null
+            : currentReply
+      );
+    } catch (error) {
+      console.error(
+        "Could not unsend message:",
+        error
+      );
+
+      setSendError(
+        error instanceof Error
+          ? error.message
+          : "Could not unsend the message."
+      );
+    } finally {
+      setDeletingMessageId(null);
+    }
+  }
+
   const displayName =
     getDisplayName(otherUser);
 
-  const latestOwnMessage = [...messages]
+  const latestOwnMessage = [
+    ...messages,
+  ]
     .reverse()
     .find(
       (message) =>
@@ -524,12 +750,21 @@ export default function ConversationPage() {
         currentUserId
     );
 
+  const messageMap = new Map(
+    messages.map((message) => [
+      message.id,
+      message,
+    ])
+  );
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
         {currentUserId ? (
           <AppNav
-            currentUserId={currentUserId}
+            currentUserId={
+              currentUserId
+            }
           />
         ) : null}
 
@@ -538,7 +773,9 @@ export default function ConversationPage() {
         ) : errorMessage ? (
           <section className="mt-6 rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-500">
-              <AlertCircle size={27} />
+              <AlertCircle
+                size={27}
+              />
             </div>
 
             <h1 className="mt-4 text-xl font-bold text-gray-900">
@@ -553,7 +790,9 @@ export default function ConversationPage() {
               href="/messages"
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-pink-600"
             >
-              <ArrowLeft size={17} />
+              <ArrowLeft
+                size={17}
+              />
               Back to messages
             </Link>
           </section>
@@ -563,12 +802,16 @@ export default function ConversationPage() {
               <button
                 type="button"
                 onClick={() =>
-                  router.push("/messages")
+                  router.push(
+                    "/messages"
+                  )
                 }
                 aria-label="Back to messages"
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-pink-50 hover:text-pink-500"
               >
-                <ArrowLeft size={21} />
+                <ArrowLeft
+                  size={21}
+                />
               </button>
 
               <Link
@@ -614,7 +857,8 @@ export default function ConversationPage() {
             </header>
 
             <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-pink-50/40 px-4 py-6 sm:px-6">
-              {messages.length === 0 ? (
+              {messages.length ===
+              0 ? (
                 <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink-100 text-pink-500">
                     <MessageCircle
@@ -623,19 +867,23 @@ export default function ConversationPage() {
                   </div>
 
                   <h2 className="mt-4 text-lg font-bold text-gray-900">
-                    Start your conversation
+                    Start your
+                    conversation
                   </h2>
 
                   <p className="mt-2 max-w-xs text-sm leading-6 text-gray-500">
                     Send a message to{" "}
-                    {displayName} to begin
-                    chatting.
+                    {displayName} to
+                    begin chatting.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {messages.map(
-                    (message, index) => {
+                    (
+                      message,
+                      index
+                    ) => {
                       const sentByCurrentUser =
                         message.sender_id ===
                         currentUserId;
@@ -644,8 +892,19 @@ export default function ConversationPage() {
                         latestOwnMessage?.id ===
                         message.id;
 
+                      const repliedMessage =
+                        message.reply_to_message_id
+                          ? messageMap.get(
+                              message.reply_to_message_id
+                            ) ?? null
+                          : null;
+
                       return (
-                        <div key={message.id}>
+                        <div
+                          key={
+                            message.id
+                          }
+                        >
                           {shouldShowDateDivider(
                             messages,
                             index
@@ -664,14 +923,14 @@ export default function ConversationPage() {
                           ) : null}
 
                           <div
-                            className={`flex ${
+                            className={`group flex ${
                               sentByCurrentUser
                                 ? "justify-end"
                                 : "justify-start"
                             }`}
                           >
                             <div
-                              className={`max-w-[82%] sm:max-w-[72%] ${
+                              className={`flex max-w-[82%] flex-col sm:max-w-[72%] ${
                                 sentByCurrentUser
                                   ? "items-end"
                                   : "items-start"
@@ -684,6 +943,58 @@ export default function ConversationPage() {
                                     : "rounded-bl-md border border-gray-100 bg-white text-gray-800"
                                 }`}
                               >
+                                {message.reply_to_message_id ? (
+                                  <div
+                                    className={`mb-2 rounded-xl border-l-4 px-3 py-2 ${
+                                      sentByCurrentUser
+                                        ? "border-white/70 bg-white/15"
+                                        : "border-pink-400 bg-pink-50"
+                                    }`}
+                                  >
+                                    {repliedMessage ? (
+                                      <>
+                                        <p
+                                          className={`text-xs font-semibold ${
+                                            sentByCurrentUser
+                                              ? "text-white"
+                                              : "text-pink-600"
+                                          }`}
+                                        >
+                                          {getReplyAuthorName(
+                                            repliedMessage,
+                                            currentUserId,
+                                            otherUser
+                                          )}
+                                        </p>
+
+                                        <p
+                                          className={`mt-0.5 line-clamp-2 whitespace-pre-wrap break-words text-xs leading-5 ${
+                                            sentByCurrentUser
+                                              ? "text-white/80"
+                                              : "text-gray-500"
+                                          }`}
+                                        >
+                                          {getReplyPreviewContent(
+                                            repliedMessage.content
+                                          )}
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <p
+                                        className={`text-xs ${
+                                          sentByCurrentUser
+                                            ? "text-white/80"
+                                            : "text-gray-400"
+                                        }`}
+                                      >
+                                        Original
+                                        message
+                                        unavailable
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : null}
+
                                 <p className="whitespace-pre-wrap break-words">
                                   {
                                     message.content
@@ -707,16 +1018,58 @@ export default function ConversationPage() {
                                 {sentByCurrentUser ? (
                                   message.read_at ? (
                                     <CheckCheck
-                                      size={14}
+                                      size={
+                                        14
+                                      }
                                       className="text-pink-500"
                                     />
                                   ) : (
                                     <Check
-                                      size={14}
+                                      size={
+                                        14
+                                      }
                                     />
                                   )
                                 ) : null}
                               </div>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleStartReply(
+                                    message
+                                  )
+                                }
+                                className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-gray-400 opacity-100 transition hover:bg-pink-50 hover:text-pink-500 sm:opacity-0 sm:group-hover:opacity-100 ${
+                                  sentByCurrentUser
+                                    ? "self-end"
+                                    : "self-start"
+                                }`}
+                                aria-label={`Reply to message: ${getReplyPreviewContent(
+                                  message.content
+                                )}`}
+                              >
+                                <Reply
+                                  size={13}
+                                />
+                                Reply
+                              </button>
+                              {sentByCurrentUser ? (
+  <button
+    type="button"
+    onClick={() =>
+      handleUnsendMessage(message.id)
+    }
+    disabled={
+      deletingMessageId === message.id
+    }
+    className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+  >
+    {deletingMessageId === message.id
+      ? "Unsending..."
+      : "Unsend"}
+  </button>
+) : null}
 
                               {sentByCurrentUser &&
                               isLatestOwnMessage &&
@@ -732,18 +1085,57 @@ export default function ConversationPage() {
                     }
                   )}
 
-                  <div ref={messagesEndRef} />
+                  <div
+                    ref={messagesEndRef}
+                  />
                 </div>
               )}
             </div>
 
             <footer className="border-t border-pink-100 bg-white p-4 sm:p-5">
+              {replyingToMessage ? (
+                <div className="mb-3 flex items-start gap-3 rounded-2xl border border-pink-100 bg-pink-50/70 px-4 py-3">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-pink-100 text-pink-500">
+                    <Reply size={16} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-pink-600">
+                      Replying to{" "}
+                      {getReplyAuthorName(
+                        replyingToMessage,
+                        currentUserId,
+                        otherUser
+                      )}
+                    </p>
+
+                    <p className="mt-1 truncate text-sm text-gray-500">
+                      {getReplyPreviewContent(
+                        replyingToMessage.content
+                      )}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={
+                      handleCancelReply
+                    }
+                    aria-label="Cancel reply"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-white hover:text-pink-500"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+              ) : null}
+
               {sendError ? (
                 <div className="mb-3 flex items-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
                   <AlertCircle
                     size={17}
                     className="shrink-0"
                   />
+
                   <p>{sendError}</p>
                 </div>
               ) : null}
@@ -756,14 +1148,30 @@ export default function ConversationPage() {
               >
                 <div className="flex-1 rounded-3xl border border-pink-100 bg-pink-50/60 px-4 py-2 transition focus-within:border-pink-300 focus-within:bg-white">
                   <textarea
+                    ref={textareaRef}
                     value={messageText}
-                    onChange={(event) => {
+                    onChange={(
+                      event
+                    ) => {
                       setMessageText(
                         event.target.value
                       );
+
                       setSendError("");
                     }}
-                    onKeyDown={(event) => {
+                    onKeyDown={(
+                      event
+                    ) => {
+                      if (
+                        event.key ===
+                          "Escape" &&
+                        replyingToMessage
+                      ) {
+                        event.preventDefault();
+                        handleCancelReply();
+                        return;
+                      }
+
                       if (
                         event.key ===
                           "Enter" &&
@@ -771,11 +1179,14 @@ export default function ConversationPage() {
                       ) {
                         event.preventDefault();
 
-                        event.currentTarget
-                          .form?.requestSubmit();
+                        event.currentTarget.form?.requestSubmit();
                       }
                     }}
-                    placeholder={`Message ${displayName}`}
+                    placeholder={
+                      replyingToMessage
+                        ? "Write a reply..."
+                        : `Message ${displayName}`
+                    }
                     maxLength={2000}
                     rows={1}
                     className="max-h-32 min-h-8 w-full resize-none bg-transparent py-1 text-sm leading-6 text-gray-900 outline-none placeholder:text-gray-400"
@@ -783,7 +1194,9 @@ export default function ConversationPage() {
 
                   <div className="flex justify-end">
                     <span className="text-[10px] text-gray-300">
-                      {messageText.length}
+                      {
+                        messageText.length
+                      }
                       /2000
                     </span>
                   </div>
@@ -810,8 +1223,10 @@ export default function ConversationPage() {
               </form>
 
               <p className="mt-2 px-2 text-xs text-gray-400">
-                Press Enter to send and
-                Shift + Enter for a new line.
+                Press Enter to send,
+                Shift + Enter for a new
+                line, and Escape to cancel
+                a reply.
               </p>
             </footer>
           </section>
