@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, UserRound } from "lucide-react";
 
-import AppNav from "@/components/navigation/AppNav";
-
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -268,7 +266,6 @@ export default function SearchPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <AppNav currentUserId={currentUserId} />
 
         <section className="rounded-3xl border border-pink-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-4">

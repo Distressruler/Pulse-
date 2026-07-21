@@ -19,7 +19,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import AppNav from "@/components/navigation/AppNav";
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -486,9 +485,6 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <AppNav
-          currentUserId={currentUserId}
-        />
 
         {message && (
           <p className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600 shadow-sm">

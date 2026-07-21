@@ -18,7 +18,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import AppNav from "@/components/navigation/AppNav";
 import { supabase } from "@/lib/supabase";
 
 const AVATAR_BUCKET = "avatars";
@@ -528,11 +527,6 @@ export default function EditProfilePage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <AppNav
-          currentUserId={
-            currentUserId
-          }
-        />
 
         <section className="overflow-hidden rounded-3xl border border-pink-100 bg-white shadow-sm">
           <div className="h-24 bg-gradient-to-r from-pink-200 via-rose-100 to-pink-100" />

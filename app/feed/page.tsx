@@ -7,7 +7,6 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
-import AppNav from "@/components/navigation/AppNav";
 import FeedHeader from "@/components/feed/FeedHeader";
 import PostCard from "@/components/feed/PostCard";
 import PostComposer from "@/components/feed/PostComposer";
@@ -427,8 +426,7 @@ export default function FeedPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <AppNav currentUserId={userId} />
-
+  
         <FeedHeader
           username={username}
           email={email}
