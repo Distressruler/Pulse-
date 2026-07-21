@@ -19,6 +19,101 @@ import type {
   Profile,
 } from "@/types/social";
 
+function SkeletonBlock({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl bg-pink-100 ${className}`}
+    />
+  );
+}
+
+function NavigationSkeleton() {
+  return (
+    <div className="mb-6 flex items-center justify-between rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-10 w-10 rounded-full" />
+        <SkeletonBlock className="h-5 w-24" />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function SearchHeaderSkeleton() {
+  return (
+    <section className="rounded-3xl border border-pink-100 bg-white p-6 shadow-sm">
+      <div className="flex items-center gap-4">
+        <SkeletonBlock className="h-12 w-12 rounded-full" />
+
+        <div className="space-y-2">
+          <SkeletonBlock className="h-7 w-28" />
+          <SkeletonBlock className="h-4 w-40" />
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <SkeletonBlock className="h-12 flex-1 rounded-full" />
+        <SkeletonBlock className="h-12 w-full rounded-full sm:w-28" />
+      </div>
+    </section>
+  );
+}
+
+function UserCardSkeleton() {
+  return (
+    <article className="flex items-center justify-between gap-4 rounded-3xl border border-pink-100 bg-white p-5 shadow-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <SkeletonBlock className="h-12 w-12 shrink-0 rounded-full" />
+
+        <div className="min-w-0 flex-1 space-y-2">
+          <SkeletonBlock className="h-4 w-32" />
+          <SkeletonBlock className="h-3 w-24" />
+          <SkeletonBlock className="h-3 w-10/12" />
+        </div>
+      </div>
+
+      <SkeletonBlock className="h-9 w-24 shrink-0 rounded-full" />
+    </article>
+  );
+}
+
+function SearchPageSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        <NavigationSkeleton />
+        <SearchHeaderSkeleton />
+
+        <section className="mt-6 space-y-3">
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function SearchResultsSkeleton() {
+  return (
+    <section className="mt-6 space-y-3">
+      <UserCardSkeleton />
+      <UserCardSkeleton />
+      <UserCardSkeleton />
+    </section>
+  );
+}
+
 export default function SearchPage() {
   const router = useRouter();
 
@@ -83,6 +178,7 @@ export default function SearchPage() {
 
     try {
       setSearching(true);
+      setUsers([]);
       setMessage("");
 
       const { data, error } = await supabase
@@ -166,15 +262,7 @@ export default function SearchPage() {
   }
 
   if (pageLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-pink-50 text-gray-900">
-        <div className="rounded-2xl border border-pink-100 bg-white px-6 py-4 shadow-sm">
-          <p className="text-sm font-medium text-pink-500">
-            Loading search...
-          </p>
-        </div>
-      </main>
-    );
+    return <SearchPageSkeleton />;
   }
 
   return (
@@ -236,90 +324,94 @@ export default function SearchPage() {
           </p>
         )}
 
-        <section className="mt-6 space-y-3">
-          {users.map((user) => {
-            const alreadyFollowing = following.some(
-              (follow) =>
-                follow.following_id === user.id
-            );
+        {searching ? (
+          <SearchResultsSkeleton />
+        ) : (
+          <section className="mt-6 space-y-3">
+            {users.map((user) => {
+              const alreadyFollowing = following.some(
+                (follow) =>
+                  follow.following_id === user.id
+              );
 
-            const updating =
-              updatingUserId === user.id;
+              const updating =
+                updatingUserId === user.id;
 
-            const userName =
-              user.username ??
-              user.display_name ??
-              "pulse-user";
+              const userName =
+                user.username ??
+                user.display_name ??
+                "pulse-user";
 
-            const avatarLetter = userName
-              .charAt(0)
-              .toUpperCase();
-
-            return (
-              <article
-                key={user.id}
-                className="flex items-center justify-between gap-4 rounded-3xl border border-pink-100 bg-white p-5 shadow-sm transition hover:shadow-md"
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push(`/profile/${user.id}`)
-                  }
-                  className="flex min-w-0 items-center gap-4 text-left"
+              return (
+                <article
+                  key={user.id}
+                  className="flex items-center justify-between gap-4 rounded-3xl border border-pink-100 bg-white p-5 shadow-sm transition hover:shadow-md"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-pink-100 font-bold text-pink-500">
-                    {user.avatar_url ? (
-                      <img
-                        src={user.avatar_url}
-                        alt={`${userName}'s avatar`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <UserRound size={21} />
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        `/profile/${user.id}`
+                      )
+                    }
+                    className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-pink-100 font-bold text-pink-500">
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={`${userName}'s avatar`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <UserRound size={21} />
+                      )}
+                    </div>
 
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-gray-900 transition hover:text-pink-500">
-                      @{user.username ?? "pulse-user"}
-                    </p>
-
-                    {user.display_name && (
-                      <p className="mt-1 truncate text-sm text-gray-500">
-                        {user.display_name}
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 transition hover:text-pink-500">
+                        @
+                        {user.username ??
+                          "pulse-user"}
                       </p>
-                    )}
 
-                    {user.bio && (
-                      <p className="mt-2 line-clamp-2 text-sm leading-5 text-gray-500">
-                        {user.bio}
-                      </p>
-                    )}
-                  </div>
-                </button>
+                      {user.display_name && (
+                        <p className="mt-1 truncate text-sm text-gray-500">
+                          {user.display_name}
+                        </p>
+                      )}
 
-                <button
-                  type="button"
-                  disabled={updating}
-                  onClick={() =>
-                    handleToggleFollow(user.id)
-                  }
-                  className={
-                    alreadyFollowing
-                      ? "shrink-0 rounded-full border border-pink-200 bg-white px-5 py-2 text-sm font-semibold text-pink-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                      : "shrink-0 rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-pink-600 disabled:opacity-50"
-                  }
-                >
-                  {updating
-                    ? "..."
-                    : alreadyFollowing
-                      ? "Unfollow"
-                      : "Follow"}
-                </button>
-              </article>
-            );
-          })}
-        </section>
+                      {user.bio && (
+                        <p className="mt-2 line-clamp-2 text-sm leading-5 text-gray-500">
+                          {user.bio}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={updating}
+                    onClick={() =>
+                      handleToggleFollow(user.id)
+                    }
+                    className={
+                      alreadyFollowing
+                        ? "shrink-0 rounded-full border border-pink-200 bg-white px-5 py-2 text-sm font-semibold text-pink-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                        : "shrink-0 rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-pink-600 disabled:opacity-50"
+                    }
+                  >
+                    {updating
+                      ? "..."
+                      : alreadyFollowing
+                        ? "Unfollow"
+                        : "Follow"}
+                  </button>
+                </article>
+              );
+            })}
+          </section>
+        )}
       </div>
     </main>
   );

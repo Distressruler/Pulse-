@@ -33,6 +33,144 @@ import type {
   Profile,
 } from "@/types/social";
 
+function SkeletonBlock({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl bg-pink-100 ${className}`}
+    />
+  );
+}
+
+function NavigationSkeleton() {
+  return (
+    <div className="mb-6 flex items-center justify-between rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-10 w-10 rounded-full" />
+        <SkeletonBlock className="h-5 w-24" />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function ProfileHeaderSkeleton() {
+  return (
+    <section className="overflow-hidden rounded-3xl border border-pink-100 bg-white shadow-sm">
+      <SkeletonBlock className="h-28 w-full rounded-none" />
+
+      <div className="px-5 pb-6 sm:px-7">
+        <div className="-mt-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-end gap-4">
+            <div className="rounded-full border-4 border-white bg-white shadow-sm">
+              <SkeletonBlock className="h-24 w-24 rounded-full" />
+            </div>
+
+            <div className="space-y-2 pb-1">
+              <SkeletonBlock className="h-6 w-40" />
+              <SkeletonBlock className="h-4 w-28" />
+            </div>
+          </div>
+
+          <SkeletonBlock className="h-10 w-full rounded-full sm:w-32" />
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <SkeletonBlock className="h-4 w-full" />
+          <SkeletonBlock className="h-4 w-10/12" />
+        </div>
+
+        <div className="mt-5 flex items-center gap-2">
+          <SkeletonBlock className="h-4 w-4 rounded-full" />
+          <SkeletonBlock className="h-4 w-32" />
+        </div>
+
+        <div className="mt-6 grid grid-cols-3 gap-3 border-t border-pink-100 pt-5">
+          <div className="rounded-2xl bg-pink-50 p-4">
+            <SkeletonBlock className="mx-auto h-6 w-10" />
+            <SkeletonBlock className="mx-auto mt-2 h-3 w-12" />
+          </div>
+
+          <div className="rounded-2xl bg-pink-50 p-4">
+            <SkeletonBlock className="mx-auto h-6 w-10" />
+            <SkeletonBlock className="mx-auto mt-2 h-3 w-16" />
+          </div>
+
+          <div className="rounded-2xl bg-pink-50 p-4">
+            <SkeletonBlock className="mx-auto h-6 w-10" />
+            <SkeletonBlock className="mx-auto mt-2 h-3 w-16" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PostsHeaderSkeleton() {
+  return (
+    <div className="flex items-center gap-3">
+      <SkeletonBlock className="h-10 w-10 rounded-full" />
+
+      <div className="space-y-2">
+        <SkeletonBlock className="h-5 w-20" />
+        <SkeletonBlock className="h-4 w-44" />
+      </div>
+    </div>
+  );
+}
+
+function ProfilePostSkeleton() {
+  return (
+    <article className="rounded-3xl border border-pink-100 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-10 w-10 shrink-0 rounded-full" />
+
+        <div className="space-y-2">
+          <SkeletonBlock className="h-4 w-32" />
+          <SkeletonBlock className="h-3 w-24" />
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        <SkeletonBlock className="h-4 w-full" />
+        <SkeletonBlock className="h-4 w-11/12" />
+        <SkeletonBlock className="h-4 w-8/12" />
+      </div>
+
+      <SkeletonBlock className="mt-5 h-3 w-32" />
+    </article>
+  );
+}
+
+function ProfilePageSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        <NavigationSkeleton />
+        <ProfileHeaderSkeleton />
+
+        <section className="mt-8">
+          <PostsHeaderSkeleton />
+
+          <div className="mt-5 space-y-4">
+            <ProfilePostSkeleton />
+            <ProfilePostSkeleton />
+            <ProfilePostSkeleton />
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const params = useParams();
@@ -163,13 +301,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadPage() {
-      /*
-       * Protection against the old URL:
-       * /edit-profile
-       *
-       * Next.js would otherwise treat "edit"
-       * as the dynamic profile ID.
-       */
       if (profileId === "edit") {
         router.replace("/edit-profile");
         return;
@@ -250,15 +381,7 @@ export default function ProfilePage() {
     pageLoading ||
     profileId === "edit"
   ) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4">
-        <div className="rounded-2xl border border-pink-100 bg-white px-6 py-4 shadow-sm">
-          <p className="text-sm font-medium text-pink-500">
-            Loading profile...
-          </p>
-        </div>
-      </main>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   if (!profile) {

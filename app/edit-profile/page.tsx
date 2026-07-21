@@ -24,6 +24,115 @@ import { supabase } from "@/lib/supabase";
 const AVATAR_BUCKET = "avatars";
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
+function SkeletonBlock({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl bg-pink-100 ${className}`}
+    />
+  );
+}
+
+function NavigationSkeleton() {
+  return (
+    <div className="mb-6 flex items-center justify-between rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-10 w-10 rounded-full" />
+        <SkeletonBlock className="h-5 w-24" />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function FormFieldSkeleton({
+  includeHelper = false,
+  large = false,
+}: {
+  includeHelper?: boolean;
+  large?: boolean;
+}) {
+  return (
+    <div>
+      <SkeletonBlock className="mb-2 h-4 w-24" />
+
+      <SkeletonBlock
+        className={
+          large
+            ? "h-32 w-full rounded-2xl"
+            : "h-13 w-full rounded-2xl"
+        }
+      />
+
+      {includeHelper && (
+        <SkeletonBlock className="mt-2 h-3 w-44" />
+      )}
+    </div>
+  );
+}
+
+function EditProfilePageSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        <NavigationSkeleton />
+
+        <section className="overflow-hidden rounded-3xl border border-pink-100 bg-white shadow-sm">
+          <SkeletonBlock className="h-24 w-full rounded-none" />
+
+          <div className="p-5 sm:p-8">
+            <div className="mb-7 flex items-center gap-2">
+              <SkeletonBlock className="h-4 w-4 rounded-full" />
+              <SkeletonBlock className="h-4 w-28" />
+            </div>
+
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+              <div className="relative w-fit">
+                <div className="rounded-full border-4 border-white bg-white shadow-md">
+                  <SkeletonBlock className="h-28 w-28 rounded-full" />
+                </div>
+
+                <SkeletonBlock className="absolute bottom-0 right-0 h-10 w-10 rounded-full border-4 border-white" />
+              </div>
+
+              <div className="flex-1">
+                <SkeletonBlock className="h-7 w-40 sm:h-8" />
+                <SkeletonBlock className="mt-3 h-4 w-56" />
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <SkeletonBlock className="h-9 w-36 rounded-full" />
+                  <SkeletonBlock className="h-9 w-24 rounded-full" />
+                </div>
+
+                <SkeletonBlock className="mt-3 h-3 w-52" />
+              </div>
+            </div>
+
+            <div className="mt-9 space-y-6">
+              <FormFieldSkeleton includeHelper />
+              <FormFieldSkeleton />
+              <FormFieldSkeleton large />
+
+              <div className="flex flex-col-reverse gap-3 border-t border-pink-100 pt-6 sm:flex-row sm:justify-end">
+                <SkeletonBlock className="h-11 w-full rounded-full sm:w-24" />
+                <SkeletonBlock className="h-11 w-full rounded-full sm:w-36" />
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default function EditProfilePage() {
   const router = useRouter();
 
@@ -94,19 +203,28 @@ export default function EditProfilePage() {
           .single();
 
         if (profileError) {
-          throw new Error(profileError.message);
+          throw new Error(
+            profileError.message
+          );
         }
 
-        setUsername(profile.username ?? "");
+        setUsername(
+          profile.username ?? ""
+        );
+
         setDisplayName(
           profile.display_name ?? ""
         );
+
         setBio(profile.bio ?? "");
 
         const loadedAvatar =
           profile.avatar_url ?? "";
 
-        setCurrentAvatarUrl(loadedAvatar);
+        setCurrentAvatarUrl(
+          loadedAvatar
+        );
+
         setAvatarPreview(loadedAvatar);
       } catch (error) {
         setMessage(
@@ -128,7 +246,9 @@ export default function EditProfilePage() {
         avatarPreview &&
         avatarPreview.startsWith("blob:")
       ) {
-        URL.revokeObjectURL(avatarPreview);
+        URL.revokeObjectURL(
+          avatarPreview
+        );
       }
     };
   }, [avatarPreview]);
@@ -140,7 +260,8 @@ export default function EditProfilePage() {
   function handleAvatarSelection(
     event: ChangeEvent<HTMLInputElement>
   ) {
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     if (!file) {
       return;
@@ -148,7 +269,9 @@ export default function EditProfilePage() {
 
     setMessage("");
 
-    if (!file.type.startsWith("image/")) {
+    if (
+      !file.type.startsWith("image/")
+    ) {
       setMessage(
         "Please choose a valid image file."
       );
@@ -157,7 +280,9 @@ export default function EditProfilePage() {
       return;
     }
 
-    if (file.size > MAX_AVATAR_SIZE) {
+    if (
+      file.size > MAX_AVATAR_SIZE
+    ) {
       setMessage(
         "Profile picture must be smaller than 5 MB."
       );
@@ -170,7 +295,9 @@ export default function EditProfilePage() {
       avatarPreview &&
       avatarPreview.startsWith("blob:")
     ) {
-      URL.revokeObjectURL(avatarPreview);
+      URL.revokeObjectURL(
+        avatarPreview
+      );
     }
 
     const previewUrl =
@@ -186,7 +313,9 @@ export default function EditProfilePage() {
       avatarPreview &&
       avatarPreview.startsWith("blob:")
     ) {
-      URL.revokeObjectURL(avatarPreview);
+      URL.revokeObjectURL(
+        avatarPreview
+      );
     }
 
     setSelectedAvatar(null);
@@ -203,8 +332,10 @@ export default function EditProfilePage() {
     file: File
   ) {
     const fileExtension =
-      file.name.split(".").pop()?.toLowerCase() ||
-      "jpg";
+      file.name
+        .split(".")
+        .pop()
+        ?.toLowerCase() || "jpg";
 
     const filePath =
       `${userId}/avatar-${Date.now()}.${fileExtension}`;
@@ -220,7 +351,9 @@ export default function EditProfilePage() {
       });
 
     if (uploadError) {
-      throw new Error(uploadError.message);
+      throw new Error(
+        uploadError.message
+      );
     }
 
     const {
@@ -249,16 +382,21 @@ export default function EditProfilePage() {
       return;
     }
 
-    const encodedPath = avatarUrl.slice(
-      markerPosition + pathMarker.length
-    );
+    const encodedPath =
+      avatarUrl.slice(
+        markerPosition +
+          pathMarker.length
+      );
 
     const storagePath =
-      decodeURIComponent(encodedPath);
+      decodeURIComponent(
+        encodedPath
+      );
 
-    const { error } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .remove([storagePath]);
+    const { error } =
+      await supabase.storage
+        .from(AVATAR_BUCKET)
+        .remove([storagePath]);
 
     if (error) {
       console.error(
@@ -273,20 +411,28 @@ export default function EditProfilePage() {
   ) {
     event.preventDefault();
 
-    if (!currentUserId || saving) {
+    if (
+      !currentUserId ||
+      saving
+    ) {
       return;
     }
 
-    const cleanedUsername = username
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "");
+    const cleanedUsername =
+      username
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(
+          /[^a-z0-9_]/g,
+          ""
+        );
 
     if (!cleanedUsername) {
       setMessage(
         "Please enter a valid username."
       );
+
       return;
     }
 
@@ -297,7 +443,8 @@ export default function EditProfilePage() {
       let nextAvatarUrl =
         removeAvatar
           ? null
-          : currentAvatarUrl || null;
+          : currentAvatarUrl ||
+            null;
 
       if (selectedAvatar) {
         const uploadedAvatarUrl =
@@ -310,17 +457,25 @@ export default function EditProfilePage() {
           uploadedAvatarUrl;
       }
 
-      const { error: updateError } =
-        await supabase
-          .from("profiles")
-          .update({
-            username: cleanedUsername,
-            display_name:
-              displayName.trim() || null,
-            bio: bio.trim() || null,
-            avatar_url: nextAvatarUrl,
-          })
-          .eq("id", currentUserId);
+      const {
+        error: updateError,
+      } = await supabase
+        .from("profiles")
+        .update({
+          username:
+            cleanedUsername,
+          display_name:
+            displayName.trim() ||
+            null,
+          bio:
+            bio.trim() || null,
+          avatar_url:
+            nextAvatarUrl,
+        })
+        .eq(
+          "id",
+          currentUserId
+        );
 
       if (updateError) {
         throw new Error(
@@ -330,7 +485,8 @@ export default function EditProfilePage() {
 
       if (
         currentAvatarUrl &&
-        (selectedAvatar || removeAvatar)
+        (selectedAvatar ||
+          removeAvatar)
       ) {
         await deletePreviousAvatar(
           currentAvatarUrl
@@ -340,6 +496,7 @@ export default function EditProfilePage() {
       router.push(
         `/profile/${currentUserId}`
       );
+
       router.refresh();
     } catch (error) {
       setMessage(
@@ -354,15 +511,7 @@ export default function EditProfilePage() {
 
   if (pageLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-pink-100 bg-white px-6 py-4 shadow-sm">
-          <LoaderCircle className="h-5 w-5 animate-spin text-pink-500" />
-
-          <p className="text-sm font-medium text-pink-500">
-            Loading profile...
-          </p>
-        </div>
-      </main>
+      <EditProfilePageSkeleton />
     );
   }
 
@@ -372,13 +521,17 @@ export default function EditProfilePage() {
     "Pulse user";
 
   const firstLetter =
-    previewName.charAt(0).toUpperCase();
+    previewName
+      .charAt(0)
+      .toUpperCase();
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
       <div className="mx-auto max-w-2xl">
         <AppNav
-          currentUserId={currentUserId}
+          currentUserId={
+            currentUserId
+          }
         />
 
         <section className="overflow-hidden rounded-3xl border border-pink-100 bg-white shadow-sm">
@@ -395,7 +548,10 @@ export default function EditProfilePage() {
               }
               className="mb-7 flex items-center gap-2 text-sm font-semibold text-gray-500 transition hover:text-pink-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <ArrowLeft size={17} />
+              <ArrowLeft
+                size={17}
+              />
+
               Back to profile
             </button>
 
@@ -404,14 +560,18 @@ export default function EditProfilePage() {
                 <div className="rounded-full border-4 border-white bg-white shadow-md">
                   {avatarPreview ? (
                     <img
-                      src={avatarPreview}
+                      src={
+                        avatarPreview
+                      }
                       alt={previewName}
                       className="h-28 w-28 rounded-full object-cover"
                     />
                   ) : (
                     <div className="flex h-28 w-28 items-center justify-center rounded-full bg-pink-100 text-3xl font-bold text-pink-500">
                       {firstLetter || (
-                        <UserRound size={34} />
+                        <UserRound
+                          size={34}
+                        />
                       )}
                     </div>
                   )}
@@ -420,11 +580,15 @@ export default function EditProfilePage() {
                 <button
                   type="button"
                   disabled={saving}
-                  onClick={openFilePicker}
+                  onClick={
+                    openFilePicker
+                  }
                   aria-label="Choose profile picture"
                   className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-pink-500 text-white shadow-sm transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Camera size={17} />
+                  <Camera
+                    size={17}
+                  />
                 </button>
               </div>
 
@@ -434,18 +598,23 @@ export default function EditProfilePage() {
                 </h1>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Update how your Pulse
-                  profile appears.
+                  Update how your
+                  Pulse profile
+                  appears.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={saving}
-                    onClick={openFilePicker}
+                    onClick={
+                      openFilePicker
+                    }
                     className="flex items-center gap-2 rounded-full bg-pink-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <ImagePlus size={16} />
+                    <ImagePlus
+                      size={16}
+                    />
 
                     {avatarPreview
                       ? "Change picture"
@@ -455,21 +624,27 @@ export default function EditProfilePage() {
                   {avatarPreview && (
                     <button
                       type="button"
-                      disabled={saving}
+                      disabled={
+                        saving
+                      }
                       onClick={
                         handleRemoveAvatar
                       }
                       className="flex items-center gap-2 rounded-full border border-red-100 bg-white px-4 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <Trash2 size={16} />
+                      <Trash2
+                        size={16}
+                      />
+
                       Remove
                     </button>
                   )}
                 </div>
 
                 <p className="mt-3 text-xs text-gray-400">
-                  JPG, PNG, WEBP or GIF.
-                  Maximum size 5 MB.
+                  JPG, PNG, WEBP
+                  or GIF. Maximum
+                  size 5 MB.
                 </p>
               </div>
             </div>
@@ -485,7 +660,9 @@ export default function EditProfilePage() {
             />
 
             <form
-              onSubmit={handleSave}
+              onSubmit={
+                handleSave
+              }
               className="mt-9 space-y-6"
             >
               <div>
@@ -508,9 +685,13 @@ export default function EditProfilePage() {
                     required
                     maxLength={30}
                     disabled={saving}
-                    onChange={(event) =>
+                    onChange={(
+                      event
+                    ) =>
                       setUsername(
-                        event.target.value
+                        event
+                          .target
+                          .value
                       )
                     }
                     placeholder="your_username"
@@ -519,8 +700,9 @@ export default function EditProfilePage() {
                 </div>
 
                 <p className="mt-2 text-xs text-gray-400">
-                  Letters, numbers and
-                  underscores only.
+                  Letters, numbers
+                  and underscores
+                  only.
                 </p>
               </div>
 
@@ -535,12 +717,18 @@ export default function EditProfilePage() {
                 <input
                   id="displayName"
                   type="text"
-                  value={displayName}
+                  value={
+                    displayName
+                  }
                   maxLength={60}
                   disabled={saving}
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setDisplayName(
-                      event.target.value
+                      event
+                        .target
+                        .value
                     )
                   }
                   placeholder="Your name"
@@ -562,8 +750,14 @@ export default function EditProfilePage() {
                   value={bio}
                   maxLength={300}
                   disabled={saving}
-                  onChange={(event) =>
-                    setBio(event.target.value)
+                  onChange={(
+                    event
+                  ) =>
+                    setBio(
+                      event
+                        .target
+                        .value
+                    )
                   }
                   placeholder="Tell people something about yourself..."
                   className="w-full resize-none rounded-2xl border border-pink-100 bg-pink-50 px-4 py-3.5 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-pink-300 focus:ring-4 focus:ring-pink-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -605,7 +799,9 @@ export default function EditProfilePage() {
                       className="animate-spin"
                     />
                   ) : (
-                    <Save size={17} />
+                    <Save
+                      size={17}
+                    />
                   )}
 
                   {saving
