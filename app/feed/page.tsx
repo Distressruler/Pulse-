@@ -44,6 +44,125 @@ import type {
   Profile,
 } from "@/types/social";
 
+function SkeletonBlock({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl bg-pink-100 ${className}`}
+    />
+  );
+}
+
+function NavigationSkeleton() {
+  return (
+    <div className="mb-6 flex items-center justify-between rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-10 w-10 rounded-full" />
+        <SkeletonBlock className="h-5 w-24" />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+        <SkeletonBlock className="h-9 w-9 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function HeaderSkeleton() {
+  return (
+    <div className="rounded-3xl border border-pink-100 bg-white p-6 shadow-sm">
+      <div className="flex items-center gap-4">
+        <SkeletonBlock className="h-14 w-14 rounded-full" />
+
+        <div className="flex-1 space-y-3">
+          <SkeletonBlock className="h-5 w-36" />
+          <SkeletonBlock className="h-4 w-52" />
+        </div>
+
+        <SkeletonBlock className="h-10 w-24 rounded-2xl" />
+      </div>
+    </div>
+  );
+}
+
+function ComposerSkeleton() {
+  return (
+    <div className="mt-6 rounded-3xl border border-pink-100 bg-white p-5 shadow-sm">
+      <div className="flex gap-3">
+        <SkeletonBlock className="h-10 w-10 shrink-0 rounded-full" />
+
+        <div className="flex-1">
+          <SkeletonBlock className="h-24 w-full rounded-2xl" />
+
+          <div className="mt-4 flex items-center justify-between">
+            <SkeletonBlock className="h-9 w-28 rounded-2xl" />
+            <SkeletonBlock className="h-10 w-24 rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PostSkeleton() {
+  return (
+    <article className="rounded-3xl border border-pink-100 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <SkeletonBlock className="h-11 w-11 shrink-0 rounded-full" />
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-2">
+              <SkeletonBlock className="h-4 w-28" />
+              <SkeletonBlock className="h-3 w-20" />
+            </div>
+
+            <SkeletonBlock className="h-8 w-8 rounded-full" />
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <SkeletonBlock className="h-4 w-full" />
+            <SkeletonBlock className="h-4 w-11/12" />
+            <SkeletonBlock className="h-4 w-8/12" />
+          </div>
+
+          <div className="mt-6 flex items-center gap-6">
+            <SkeletonBlock className="h-8 w-16 rounded-full" />
+            <SkeletonBlock className="h-8 w-20 rounded-full" />
+          </div>
+
+          <div className="mt-5 border-t border-pink-50 pt-4">
+            <SkeletonBlock className="h-10 w-full rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FeedPageSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-rose-50 px-4 py-8 text-gray-900 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        <NavigationSkeleton />
+        <HeaderSkeleton />
+        <ComposerSkeleton />
+
+        <section className="mt-8 space-y-4">
+          <PostSkeleton />
+          <PostSkeleton />
+          <PostSkeleton />
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default function FeedPage() {
   const router = useRouter();
 
@@ -302,15 +421,7 @@ export default function FeedPage() {
   }
 
   if (pageLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-pink-50 text-gray-900">
-        <div className="rounded-2xl border border-pink-100 bg-white px-6 py-4 shadow-sm">
-          <p className="text-sm font-medium text-pink-500">
-            Loading Pulse...
-          </p>
-        </div>
-      </main>
-    );
+    return <FeedPageSkeleton />;
   }
 
   return (
