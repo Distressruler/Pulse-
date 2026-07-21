@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
+import { supabase } from "@/lib/supabase";
 import {
   Bell,
   House,
@@ -19,6 +21,47 @@ export default function AppNav({
 }: AppNavProps) {
   const router = useRouter();
   const pathname = usePathname();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    async function loadUnreadCount() {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", {
+          count: "exact",
+          head: true,
+        })
+        .eq("recipient_id", currentUserId)
+        .eq("is_read", false);
+
+      if (!error) {
+        setUnreadCount(count ?? 0);
+      }
+    }
+
+    loadUnreadCount();
+
+    const channel = supabase
+      .channel(`notifications-${currentUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_id=eq.${currentUserId}`,
+        },
+        () => {
+          loadUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
 
   const links = [
     {
@@ -106,6 +149,15 @@ export default function AppNav({
                   }
                 />
               </motion.div>
+
+              {link.path === "/notifications" &&
+                unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 z-20 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                    {unreadCount > 99
+                      ? "99+"
+                      : unreadCount}
+                  </span>
+                )}
             </motion.button>
           );
         })}

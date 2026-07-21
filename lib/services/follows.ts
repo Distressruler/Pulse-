@@ -39,13 +39,29 @@ export async function followUser(
     throw new Error("You cannot follow yourself.");
   }
 
-  const { error } = await supabase.from("follows").insert({
-    follower_id: currentUserId,
-    following_id: targetUserId,
-  });
+  const { error } = await supabase
+    .from("follows")
+    .insert({
+      follower_id: currentUserId,
+      following_id: targetUserId,
+    });
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  const { error: notificationError } = await supabase
+    .from("notifications")
+    .insert({
+      recipient_id: targetUserId,
+      actor_id: currentUserId,
+      type: "follow",
+    });
+
+  if (notificationError) {
+    throw new Error(
+      `Notification error: ${notificationError.message}`
+    );
   }
 }
 
