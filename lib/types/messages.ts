@@ -26,3 +26,22 @@ export type ConversationMessage = {
 
   reply_to_message_id: string | null;
 };
+export type ConversationMemberRow = {
+  conversation_id: string;
+  user_id: string;
+  joined_at: string;
+};
+
+export type ConversationRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ConversationPreview = {
+  conversationId: string;
+  otherUser: MessageProfile;
+  lastMessage: ConversationMessage | null;
+  unreadCount: number;
+  updatedAt: string;
+};
