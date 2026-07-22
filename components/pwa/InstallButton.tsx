@@ -3,24 +3,33 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+};
+
 export default function InstallButton() {
-  const [promptEvent, setPromptEvent] = useState<any>(null);
+  const [promptEvent, setPromptEvent] =
+    useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setPromptEvent(e);
-    };
+    function handleBeforeInstallPrompt(event: Event) {
+      event.preventDefault();
+      setPromptEvent(event as BeforeInstallPromptEvent);
+    }
 
     window.addEventListener(
       "beforeinstallprompt",
-      handler as EventListener
+      handleBeforeInstallPrompt
     );
 
     return () => {
       window.removeEventListener(
         "beforeinstallprompt",
-        handler as EventListener
+        handleBeforeInstallPrompt
       );
     };
   }, []);
@@ -28,8 +37,7 @@ export default function InstallButton() {
   async function installApp() {
     if (!promptEvent) return;
 
-    promptEvent.prompt();
-
+    await promptEvent.prompt();
     await promptEvent.userChoice;
 
     setPromptEvent(null);
@@ -39,6 +47,7 @@ export default function InstallButton() {
 
   return (
     <button
+      type="button"
       onClick={installApp}
       className="fixed bottom-24 right-5 z-50 flex items-center gap-2 rounded-full bg-pink-500 px-5 py-3 text-white shadow-xl transition hover:bg-pink-600"
     >

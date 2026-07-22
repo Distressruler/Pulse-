@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
 import AppShell from "@/components/navigation/AppShell";
 import InstallButton from "@/components/pwa/InstallButton";
 
@@ -22,11 +23,13 @@ export const metadata: Metadata = {
   description: "Connect, share, and chat on Pulse.",
   applicationName: "Pulse",
   manifest: "/manifest.webmanifest",
+
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Pulse",
   },
+
   icons: {
     icon: [
       {
@@ -40,6 +43,7 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
+
     apple: [
       {
         url: "/icons/icon-192.png",
@@ -51,11 +55,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f9a8d4",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
+  themeColor: "#f9a8d4",
 };
 
 export default function RootLayout({
@@ -68,11 +73,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
-       <>
-  <AppShell>{children}</AppShell>
-  <InstallButton />
-</>
+      <body className="min-h-dvh overflow-x-hidden">
+        <AppShell>{children}</AppShell>
+        <InstallButton />
       </body>
     </html>
   );
