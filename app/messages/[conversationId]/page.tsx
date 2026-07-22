@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import {
   FormEvent,
   useCallback,
@@ -22,6 +23,7 @@ import {
   MessageCircle,
   Reply,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -231,6 +233,9 @@ export default function ConversationPage() {
 
   const [currentUserId, setCurrentUserId] =
     useState("");
+
+  const [selectedMessage, setSelectedMessage] =
+    useState<ConversationMessage | null>(null);
 
   const [
     deletingMessageId,
@@ -720,6 +725,8 @@ export default function ConversationPage() {
             ? null
             : currentReply
       );
+
+      setSelectedMessage(null);
     } catch (error) {
       console.error(
         "Could not unsend message:",
@@ -915,26 +922,59 @@ export default function ConversationPage() {
                           ) : null}
 
                           <div
-                            className={`group flex ${
+                            className={`relative flex overflow-hidden ${
                               sentByCurrentUser
                                 ? "justify-end"
                                 : "justify-start"
                             }`}
                           >
-                            <div
-                              className={`flex max-w-[82%] flex-col sm:max-w-[72%] ${
+                            <div className="pointer-events-none absolute inset-y-0 left-1 flex items-center text-pink-400">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-pink-100">
+                                <Reply size={17} />
+                              </div>
+                            </div>
+
+                            <motion.div
+                              drag="x"
+                              dragConstraints={{ left: 0, right: 84 }}
+                              dragElastic={0.12}
+                              onDragEnd={(_, info) => {
+                                if (info.offset.x >= 55) {
+                                  handleStartReply(message);
+                                }
+                              }}
+                              whileTap={{ scale: 0.985 }}
+                              className={`flex max-w-[82%] touch-pan-y flex-col sm:max-w-[72%] ${
                                 sentByCurrentUser
                                   ? "items-end"
                                   : "items-start"
                               }`}
                             >
-                              <div
-                                className={`rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (sentByCurrentUser) {
+                                    setSelectedMessage(message);
+                                  }
+                                }}
+                                className={`w-full text-left ${
                                   sentByCurrentUser
-                                    ? "rounded-br-md bg-pink-500 text-white"
-                                    : "rounded-bl-md border border-gray-100 bg-white text-gray-800"
+                                    ? "cursor-pointer"
+                                    : "cursor-default"
                                 }`}
+                                aria-label={
+                                  sentByCurrentUser
+                                    ? "Open message actions"
+                                    : undefined
+                                }
                               >
+                                <div
+                                  className={`rounded-[22px] px-4 py-3 text-sm leading-6 shadow-sm transition ${
+                                    sentByCurrentUser
+                                      ? "rounded-br-md bg-gradient-to-br from-pink-400 to-pink-500 text-white"
+                                      : "rounded-bl-md border border-gray-100 bg-white text-gray-800"
+                                  }`}
+                                >
                                 {message.reply_to_message_id ? (
                                   <div
                                     className={`mb-2 rounded-xl border-l-4 px-3 py-2 ${
@@ -987,12 +1027,13 @@ export default function ConversationPage() {
                                   </div>
                                 ) : null}
 
-                                <p className="whitespace-pre-wrap break-words">
-                                  {
-                                    message.content
-                                  }
-                                </p>
-                              </div>
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {
+                                      message.content
+                                    }
+                                  </p>
+                                </div>
+                              </button>
 
                               <div
                                 className={`mt-1 flex items-center gap-1 px-1 text-[11px] text-gray-400 ${
@@ -1025,44 +1066,6 @@ export default function ConversationPage() {
                                 ) : null}
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleStartReply(
-                                    message
-                                  )
-                                }
-                                className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-gray-400 opacity-100 transition hover:bg-pink-50 hover:text-pink-500 sm:opacity-0 sm:group-hover:opacity-100 ${
-                                  sentByCurrentUser
-                                    ? "self-end"
-                                    : "self-start"
-                                }`}
-                                aria-label={`Reply to message: ${getReplyPreviewContent(
-                                  message.content
-                                )}`}
-                              >
-                                <Reply
-                                  size={13}
-                                />
-                                Reply
-                              </button>
-                              {sentByCurrentUser ? (
-  <button
-    type="button"
-    onClick={() =>
-      handleUnsendMessage(message.id)
-    }
-    disabled={
-      deletingMessageId === message.id
-    }
-    className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-red-500 transition hover:bg-red-50 disabled:opacity-50"
-  >
-    {deletingMessageId === message.id
-      ? "Unsending..."
-      : "Unsend"}
-  </button>
-) : null}
-
                               {sentByCurrentUser &&
                               isLatestOwnMessage &&
                               message.read_at ? (
@@ -1070,7 +1073,7 @@ export default function ConversationPage() {
                                   Seen
                                 </p>
                               ) : null}
-                            </div>
+                            </motion.div>
                           </div>
                         </div>
                       );
@@ -1224,6 +1227,62 @@ export default function ConversationPage() {
           </section>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedMessage ? (
+          <motion.div
+            className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 px-4 pb-4 backdrop-blur-[2px] sm:items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedMessage(null)}
+          >
+            <motion.div
+              initial={{ y: 36, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 30, opacity: 0, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-sm overflow-hidden rounded-[28px] border border-pink-100 bg-white p-3 shadow-2xl"
+            >
+              <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-gray-200 sm:hidden" />
+
+              <div className="rounded-2xl bg-pink-50 px-4 py-3">
+                <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+                  {selectedMessage.content}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleUnsendMessage(selectedMessage.id)
+                }
+                disabled={deletingMessageId === selectedMessage.id}
+                className="mt-3 flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deletingMessageId === selectedMessage.id ? (
+                  <LoaderCircle size={20} className="animate-spin" />
+                ) : (
+                  <Trash2 size={20} />
+                )}
+
+                {deletingMessageId === selectedMessage.id
+                  ? "Unsending..."
+                  : "Unsend message"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMessage(null)}
+                className="mt-1 w-full rounded-2xl px-4 py-3.5 text-center font-semibold text-gray-500 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </main>
   );
 }
